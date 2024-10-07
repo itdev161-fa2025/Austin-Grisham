@@ -4,6 +4,8 @@ import connectDatabase from './config/db.js';
 import User from './models/User.js';
 import cors from 'cors';
 import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';  // Importing jsonwebtoken
+import config from 'config';  // Importing config
 
 const app = express();
 connectDatabase();
@@ -65,8 +67,24 @@ app.post(
             // Save the user to the database
             await newUser.save();
 
-            // Return a success message
-            res.status(201).json({ message: 'User registered successfully', name: newUser.name, email: newUser.email });
+            // JWT implementation: Create a payload and generate the token
+            const payload = {
+                user: {
+                    id: newUser.id  // Using the user's id
+                }
+            };
+
+            // Generate a token with the secret "gopackgo" and set expiration to 1 hour
+            jwt.sign(
+                payload,
+                "gopackgo",  // Secret key
+                { expiresIn: 3600 },  // Token expiration time (1 hour)
+                (err, token) => {
+                    if (err) throw err;
+                    res.json({ token });  // Return the token as a JSON object
+                }
+            );
+
         } catch (err) {
             // Return an error in case of any issues
             console.error(err.message);
