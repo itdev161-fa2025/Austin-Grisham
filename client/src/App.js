@@ -2,34 +2,9 @@ import React from 'react';
 import './App.css';
 import axios from 'axios';
 import { Routes, Route, Link } from 'react-router-dom';
-
-// Components for different pages
-function Home() {
-  return (
-    <div>
-      <h2>Welcome to GoodThings</h2>
-      <p>This is the Home page.</p>
-    </div>
-  );
-}
-
-function Register() {
-  return (
-    <div>
-      <h2>Register Page</h2>
-      <p>Please register for an account here.</p>
-    </div>
-  );
-}
-
-function Login() {
-  return (
-    <div>
-      <h2>Login Page</h2>
-      <p>Enter your credentials to log in.</p>
-    </div>
-  );
-}
+import Home from './components/Home'; // Corrected Import
+import Register from './components/Register'; // Corrected Import
+import Login from './components/Login'; // Corrected Import
 
 class App extends React.Component {
   state = {
@@ -58,9 +33,9 @@ class App extends React.Component {
           {/* Navigation Links */}
           <nav>
             <ul>
-              <li><Link to="/">Home</Link></li>
-              <li><Link to="/register">Register</Link></li>
-              <li><Link to="/login">Login</Link></li>
+              <li><Link to="/">Home</Link></li> {/* Changed path to "/" */}
+              <li><Link to="/register">Register</Link></li> {/* Lowercase */}
+              <li><Link to="/login">Login</Link></li> {/* Lowercase */}
             </ul>
           </nav>
         </header>
@@ -68,9 +43,9 @@ class App extends React.Component {
         {/* Define Routes */}
         <main>
           <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/login" element={<Login />} />
+            <Route path="/" element={<Home />} /> {/* Home path is "/" */}
+            <Route path="/register" element={<Register />} /> {/* Lowercase */}
+            <Route path="/login" element={<Login />} /> {/* Lowercase */}
           </Routes>
         </main>
       </div>
