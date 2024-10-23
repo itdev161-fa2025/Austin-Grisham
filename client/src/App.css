@@ -2,37 +2,50 @@
   text-align: center;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
+/* Removed the unused .App-logo and its keyframes */
 
 .App-header {
-  background-color: #282c34;
-  min-height: 10vh;
+  background-color: #2f333d;
+  /* Updated background to dark gray/black */
+  min-height: 15vh;
   display: flex;
-  flex-direction: column;
+  justify-content: space-between;
+  /* Align title to the left and links to the right */
   align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
+  padding: 0 20px;
   color: white;
 }
 
-.App-link {
-  color: #61dafb;
+/* For the title (GoodThings) */
+.App-header h1 {
+  font-size: 3rem;
+  margin: 0;
+  font-weight: bold;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+/* Styles for the navigation */
+ul {
+  list-style-type: none;
+  /* Remove bullet points */
+  padding: 0;
+  margin: 0;
+  display: flex;
+  gap: 20px;
+  /* Space between the navigation links */
+}
+
+li {
+  font-size: 1.1rem;
+}
+
+li a {
+  color: white;
+  /* Keep text color white */
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+li a:hover {
+  color: #61dafb;
+  /* Blue on hover */
 }
