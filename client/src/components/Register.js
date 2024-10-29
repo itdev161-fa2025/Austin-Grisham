@@ -26,38 +26,44 @@ const Register = ({ authenticateUser }) => {
 
     const registerUser = async () => {
         if (password !== passwordConfirm) {
-            console.log('Passwords do not match');
-        } else {
-            const newUser = {
-                name,
-                email,
-                password
+            setErrorData({ errors: [{ msg: 'Passwords do not match' }] });
+            return;
+        }
+
+        const newUser = {
+            name,
+            email,
+            password
+        };
+
+        try {
+            const config = {
+                headers: {
+                    'Content-Type': 'application/json'
+                }
             };
 
-            try {
-                const config = {
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                };
+            const body = JSON.stringify(newUser);
+            const res = await axios.post('http://localhost:5000/api/users', body, config);
 
-                const body = JSON.stringify(newUser);
-                const res = await axios.post('http://localhost:3001/api/users', body, config);
-
-                // Store user data and redirect
+            if (res && res.data && res.data.token) {
+                // Store user token and redirect
                 localStorage.setItem('token', res.data.token);
                 navigate('/');
 
                 // Authenticate the user
                 authenticateUser();
-            } catch (error) {
-                // Clear user data and set errors
-                localStorage.removeItem('token');
-                setErrorData({
-                    ...errors,
-                    errors: error.response.data.errors
-                });
+            } else {
+                console.error('Unexpected response structure:', res);
+                setErrorData({ errors: [{ msg: 'Registration failed. Please try again.' }] });
             }
+        } catch (error) {
+            localStorage.removeItem('token');
+            setErrorData({
+                errors: error.response && error.response.data && error.response.data.error
+                    ? [{ msg: error.response.data.error }]
+                    : [{ msg: 'Server error. Please try again later.' }]
+            });
         }
     };
 
@@ -104,8 +110,8 @@ const Register = ({ authenticateUser }) => {
                 <button onClick={registerUser}>Register</button>
             </div>
             <div>
-                {errors && errors.map((error) => (
-                    <div key={error.msg}>{error.msg}</div>
+                {errors && errors.map((error, index) => (
+                    <div key={index}>{error.msg}</div>
                 ))}
             </div>
         </div>

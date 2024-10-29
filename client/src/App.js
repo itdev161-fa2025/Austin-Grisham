@@ -14,7 +14,7 @@ class App extends React.Component {
   };
 
   componentDidMount() {
-    axios.get('http://localhost:3000')
+    axios.get('http://localhost:5000')
       .then((response) => {
         this.setState({
           data: response.data
@@ -42,7 +42,7 @@ class App extends React.Component {
         }
       };
 
-      axios.get('http://localhost:3000/api/auth', config)
+      axios.get('http://localhost:5000/api/auth', config)
         .then((response) => {
           localStorage.setItem('user', response.data.name);
           this.setState({ user: response.data.name });
@@ -74,7 +74,6 @@ class App extends React.Component {
             <ul>
               <li><Link to="/">Home</Link></li>
               <li><Link to="/register">Register</Link></li>
-              <li><Link to="/login">Login</Link></li>
               <li>
                 {user ? (
                   <button onClick={this.logOut}>Log out</button>
