@@ -6,6 +6,7 @@ import cors from 'cors';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';  // Importing jsonwebtoken
 import config from 'config';  // Importing config
+import auth from './middleware/auth.js';
 
 const app = express();
 connectDatabase();
@@ -48,45 +49,37 @@ app.post(
         }
 
         try {
-            // Destructure name, email, and password from the request body
             const { name, email, password } = req.body;
 
-            // Check if the user already exists
             const existingUser = await User.findOne({ email });
             if (existingUser) {
                 return res.status(400).json({ error: 'User with this email already exists' });
             }
 
-            // Encrypt the password
             const salt = await bcrypt.genSalt(10);
             const hashedPassword = await bcrypt.hash(password, salt);
 
-            // Create a new user
             const newUser = new User({ name, email, password: hashedPassword });
 
-            // Save the user to the database
             await newUser.save();
 
-            // JWT implementation: Create a payload and generate the token
             const payload = {
                 user: {
-                    id: newUser.id  // Using the user's id
+                    id: newUser.id  
                 }
             };
 
-            // Generate a token with the secret "gopackgo" and set expiration to 1 hour
             jwt.sign(
                 payload,
-                "gopackgo",  // Secret key
-                { expiresIn: 3600 },  // Token expiration time (1 hour)
+                "gopackgo",
+                { expiresIn: 3600 },
                 (err, token) => {
                     if (err) throw err;
-                    res.json({ token });  // Return the token as a JSON object
+                    res.json({ token });
                 }
             );
 
         } catch (err) {
-            // Return an error in case of any issues
             console.error(err.message);
             res.status(500).json({ error: 'Server error' });
         }
@@ -114,7 +107,7 @@ app.put(
             const updatedUser = await User.findOneAndUpdate(
                 { email },
                 { name, password },
-                { new: true, runValidators: true }  
+                { new: true, runValidators: true }
             );
 
             if (!updatedUser) {
@@ -128,6 +121,20 @@ app.put(
         }
     }
 );
+
+// Authenticated route to get the authenticated user
+/**
+ * @route GET api/auth
+ * @desc Authenticate user
+ */
+app.get('/api/auth', auth, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+        res.status(200).json(user);
+    } catch (error) {
+        res.status(500).send('Unknown server error');
+    }
+});
 
 app.use((err, _req, res, next) => {
     console.error(err.stack);
