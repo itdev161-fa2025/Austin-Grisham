@@ -4,8 +4,8 @@ import connectDatabase from './config/db.js';
 import User from './models/User.js';
 import cors from 'cors';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';  // Importing jsonwebtoken
-import config from 'config';  // Importing config
+import jwt from 'jsonwebtoken';
+import config from 'config';
 import auth from './middleware/auth.js';
 
 const app = express();
@@ -21,13 +21,10 @@ app.get('/', (_req, res) =>
 app.get('/api/users/:email', async (req, res) => {
     try {
         const { email } = req.params;
-
         const user = await User.findOne({ email });
-
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
-
         res.status(200).json(user);
     } catch (err) {
         console.error(err.message);
@@ -35,6 +32,26 @@ app.get('/api/users/:email', async (req, res) => {
     }
 });
 
+// Helper function to generate and return a JWT token
+const returnToken = (user, res) => {
+    const payload = {
+        user: {
+            id: user.id
+        }
+    };
+
+    jwt.sign(
+        payload,
+        config.get('jwtSecret'),  // Use your configured jwtSecret
+        { expiresIn: '10hr' },
+        (err, token) => {
+            if (err) throw err;
+            res.json({ token });
+        }
+    );
+};
+
+// Register User Endpoint
 app.post(
     '/api/users',
     [
@@ -60,25 +77,10 @@ app.post(
             const hashedPassword = await bcrypt.hash(password, salt);
 
             const newUser = new User({ name, email, password: hashedPassword });
-
             await newUser.save();
 
-            const payload = {
-                user: {
-                    id: newUser.id  
-                }
-            };
-
-            jwt.sign(
-                payload,
-                "gopackgo",
-                { expiresIn: 3600 },
-                (err, token) => {
-                    if (err) throw err;
-                    res.json({ token });
-                }
-            );
-
+            // Use returnToken to send JWT
+            returnToken(newUser, res);
         } catch (err) {
             console.error(err.message);
             res.status(500).json({ error: 'Server error' });
@@ -86,37 +88,39 @@ app.post(
     }
 );
 
-app.put(
-    '/api/users/:email',
+// Login User Endpoint
+/**
+ * @route POST api/login
+ * @desc Login user
+ */
+app.post(
+    '/api/login',
     [
-        check('name', 'Name is required').not().isEmpty(),
-        check('email', 'Please include a valid email').isEmail(),
-        check('password', 'Password must be at least 6 characters long').isLength({ min: 6 })
+        check('email', 'Please enter a valid email').isEmail(),
+        check('password', 'A password is required').exists(),
     ],
     async (req, res) => {
-
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            return res.status(422).json({ errors: errors.array() }); 
+            return res.status(422).json({ errors: errors.array() });
         }
 
+        const { email, password } = req.body;
         try {
-            const { email } = req.params;
-            const { name, password } = req.body;
-
-            const updatedUser = await User.findOneAndUpdate(
-                { email },
-                { name, password },
-                { new: true, runValidators: true }
-            );
-
-            if (!updatedUser) {
-                return res.status(404).json({ error: 'User not found' });
+            const user = await User.findOne({ email });
+            if (!user) {
+                return res.status(400).json({ errors: [{ msg: 'Invalid email or password' }] });
             }
 
-            res.status(200).json(updatedUser);
-        } catch (err) {
-            console.error(err.message);
+            const match = await bcrypt.compare(password, user.password);
+            if (!match) {
+                return res.status(400).json({ errors: [{ msg: 'Invalid email or password' }] });
+            }
+
+            // Use returnToken to send JWT
+            returnToken(user, res);
+        } catch (error) {
+            console.error(error.message);
             res.status(500).json({ error: 'Server error' });
         }
     }
