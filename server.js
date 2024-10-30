@@ -12,7 +12,7 @@ const app = express();
 connectDatabase();
 
 app.use(express.json());
-app.use(cors({ origin: 'http://localhost:3000' }));
+app.use(cors({ origin: 'http://localhost:3001' }));
 
 app.get('/', (_req, res) => 
     res.send('HTTP GET request sent to root API endpoint')
