@@ -15,17 +15,13 @@ connectDatabase();
 app.use(express.json());
 app.use(cors({ origin: 'http://localhost:3001' }));
 
-app.get('/', (_req, res) => 
-    res.send('HTTP GET request sent to root API endpoint')
-);
+app.get('/', (_req, res) => res.send('HTTP GET request sent to root API endpoint'));
 
 app.get('/api/users/:email', async (req, res) => {
     try {
         const { email } = req.params;
         const user = await User.findOne({ email });
-        if (!user) {
-            return res.status(404).json({ error: 'User not found' });
-        }
+        if (!user) return res.status(404).json({ error: 'User not found' });
         res.status(200).json(user);
     } catch (err) {
         console.error(err.message);
@@ -34,12 +30,7 @@ app.get('/api/users/:email', async (req, res) => {
 });
 
 const returnToken = (user, res) => {
-    const payload = {
-        user: {
-            id: user.id
-        }
-    };
-
+    const payload = { user: { id: user.id } };
     jwt.sign(
         payload,
         config.get('jwtSecret'),
@@ -60,24 +51,15 @@ app.post(
     ],
     async (req, res) => {
         const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            return res.status(422).json({ errors: errors.array() }); 
-        }
-
+        if (!errors.isEmpty()) return res.status(422).json({ errors: errors.array() });
         try {
             const { name, email, password } = req.body;
-
             const existingUser = await User.findOne({ email });
-            if (existingUser) {
-                return res.status(400).json({ error: 'User with this email already exists' });
-            }
-
+            if (existingUser) return res.status(400).json({ error: 'User with this email already exists' });
             const salt = await bcrypt.genSalt(10);
             const hashedPassword = await bcrypt.hash(password, salt);
-
             const newUser = new User({ name, email, password: hashedPassword });
             await newUser.save();
-
             returnToken(newUser, res);
         } catch (err) {
             console.error(err.message);
@@ -94,22 +76,13 @@ app.post(
     ],
     async (req, res) => {
         const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            return res.status(422).json({ errors: errors.array() });
-        }
-
+        if (!errors.isEmpty()) return res.status(422).json({ errors: errors.array() });
         const { email, password } = req.body;
         try {
             const user = await User.findOne({ email });
-            if (!user) {
-                return res.status(400).json({ errors: [{ msg: 'Invalid email or password' }] });
-            }
-
+            if (!user) return res.status(400).json({ errors: [{ msg: 'Invalid email or password' }] });
             const match = await bcrypt.compare(password, user.password);
-            if (!match) {
-                return res.status(400).json({ errors: [{ msg: 'Invalid email or password' }] });
-            }
-
+            if (!match) return res.status(400).json({ errors: [{ msg: 'Invalid email or password' }] });
             returnToken(user, res);
         } catch (error) {
             console.error(error.message);
@@ -136,28 +109,69 @@ app.post(
     ],
     async (req, res) => {
         const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            return res.status(400).json({ errors: errors.array() });
-        }
-
+        if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
         const { title, body } = req.body;
         try {
             const user = await User.findById(req.user.id);
-
-            const post = new Post({
-                user: user.id,
-                title: title,
-                body: body
-            });
-
+            const post = new Post({ user: user.id, title: title, body: body });
             await post.save();
             res.json(post);
         } catch (error) {
-            console.error(error);
+            console.error('Server error:', error);
             res.status(500).send('Server error');
         }
     }
 );
+
+app.get('/api/posts', auth, async (req, res) => {
+    try {
+        const posts = await Post.find().sort({ date: -1 });
+        res.json(posts);
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Server error');
+    }
+});
+
+app.get('/api/posts/:id', auth, async (req, res) => {
+    try {
+        const post = await Post.findById(req.params.id);
+        if (!post) return res.status(404).json({ msg: 'Post not found' });
+        res.json(post);
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Server error');
+    }
+});
+
+app.put('/api/posts/:id', auth, async (req, res) => {
+    try {
+        const { title, body } = req.body;
+        const post = await Post.findById(req.params.id);
+        if (!post) return res.status(404).json({ msg: 'Post not found' });
+        if (post.user.toString() !== req.user.id) return res.status(401).json({ msg: 'User not authorized' });
+        post.title = title || post.title;
+        post.body = body || post.body;
+        await post.save();
+        res.json(post);
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Server error');
+    }
+});
+
+app.delete('/api/posts/:id', auth, async (req, res) => {
+    try {
+        const post = await Post.findById(req.params.id);
+        if (!post) return res.status(404).json({ msg: 'Post not found' });
+        if (post.user.toString() !== req.user.id) return res.status(401).json({ msg: 'User not authorized' });
+        await Post.deleteOne({ _id: post.id });
+        res.json({ msg: 'Post removed' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Server error');
+    }
+});
 
 app.use((err, _req, res, next) => {
     console.error(err.stack);
