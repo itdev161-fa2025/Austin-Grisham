@@ -2,6 +2,7 @@ import express from 'express';
 import { check, validationResult } from 'express-validator';
 import connectDatabase from './config/db.js';
 import User from './models/User.js';
+import Post from './models/Post.js';
 import cors from 'cors';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
@@ -32,7 +33,6 @@ app.get('/api/users/:email', async (req, res) => {
     }
 });
 
-// Helper function to generate and return a JWT token
 const returnToken = (user, res) => {
     const payload = {
         user: {
@@ -42,7 +42,7 @@ const returnToken = (user, res) => {
 
     jwt.sign(
         payload,
-        config.get('jwtSecret'),  // Use your configured jwtSecret
+        config.get('jwtSecret'),
         { expiresIn: '10hr' },
         (err, token) => {
             if (err) throw err;
@@ -51,7 +51,6 @@ const returnToken = (user, res) => {
     );
 };
 
-// Register User Endpoint
 app.post(
     '/api/users',
     [
@@ -79,7 +78,6 @@ app.post(
             const newUser = new User({ name, email, password: hashedPassword });
             await newUser.save();
 
-            // Use returnToken to send JWT
             returnToken(newUser, res);
         } catch (err) {
             console.error(err.message);
@@ -88,11 +86,6 @@ app.post(
     }
 );
 
-// Login User Endpoint
-/**
- * @route POST api/login
- * @desc Login user
- */
 app.post(
     '/api/login',
     [
@@ -117,7 +110,6 @@ app.post(
                 return res.status(400).json({ errors: [{ msg: 'Invalid email or password' }] });
             }
 
-            // Use returnToken to send JWT
             returnToken(user, res);
         } catch (error) {
             console.error(error.message);
@@ -126,11 +118,6 @@ app.post(
     }
 );
 
-// Authenticated route to get the authenticated user
-/**
- * @route GET api/auth
- * @desc Authenticate user
- */
 app.get('/api/auth', auth, async (req, res) => {
     try {
         const user = await User.findById(req.user.id);
@@ -139,6 +126,38 @@ app.get('/api/auth', auth, async (req, res) => {
         res.status(500).send('Unknown server error');
     }
 });
+
+app.post(
+    '/api/posts',
+    auth,
+    [
+        check('title', 'Title text is required').not().isEmpty(),
+        check('body', 'Body text is required').not().isEmpty()
+    ],
+    async (req, res) => {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
+        }
+
+        const { title, body } = req.body;
+        try {
+            const user = await User.findById(req.user.id);
+
+            const post = new Post({
+                user: user.id,
+                title: title,
+                body: body
+            });
+
+            await post.save();
+            res.json(post);
+        } catch (error) {
+            console.error(error);
+            res.status(500).send('Server error');
+        }
+    }
+);
 
 app.use((err, _req, res, next) => {
     console.error(err.stack);
